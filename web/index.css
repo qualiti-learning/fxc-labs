@@ -1,0 +1,11 @@
+ul {
+  list-style: none;
+}
+
+li {
+  color: firebrick;
+}
+
+li.completed {
+  text-decoration: line-through;
+}
