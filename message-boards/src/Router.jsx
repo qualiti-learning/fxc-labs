@@ -16,7 +16,7 @@ function MessageBoardRouter() {
           <Route path="questions" element={<Outlet />}>
             <Route element={<Questions />} index />
             <Route path="create" element={<QuestionsCreate />} />
-            <Route path=":id" element={<Question />} />
+            <Route path=":slug" element={<Question />} />
           </Route>
         </Route>
       </Routes>

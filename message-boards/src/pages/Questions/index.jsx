@@ -48,18 +48,21 @@ export default function QuestionsList() {
       ) : (
         <CardBody>
           <Stack divider={<StackDivider />} spacing="4">
-            {questions.map((question, index) => {
-              return (
-                <Box key={index}>
-                  <Heading size="xs" textTransform="uppercase">
-                    {question.title}
-                  </Heading>
-                  <Text pt="2" fontSize="sm">
-                    {question.body}
-                  </Text>
-                </Box>
-              );
-            })}
+            {questions.map((question, index) => (
+              <Box key={index}>
+                <Heading
+                  size="xs"
+                  as={Link}
+                  to={`/questions/${question.slug}`}
+                  textTransform="uppercase"
+                >
+                  {question.title}
+                </Heading>
+                <Text pt="2" fontSize="sm">
+                  {question.body}
+                </Text>
+              </Box>
+            ))}
           </Stack>
         </CardBody>
       )}
