@@ -1,27 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useContext } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../../services/supabase';
 import { Container, Spinner } from '@chakra-ui/react';
+import { AppContext } from '../../context/AppContext';
 
 export default function Home() {
-  const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { loading, session } = useContext(AppContext);
 
   if (loading) {
     return <Spinner />;
@@ -30,7 +15,8 @@ export default function Home() {
   if (session) {
     return (
       <>
-        <span>Logged in!</span>
+        <span>Logged in! {session?.user?.email}</span>
+
         <button onClick={() => supabase.auth.signOut()}>Logout</button>
       </>
     );

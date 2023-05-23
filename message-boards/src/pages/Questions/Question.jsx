@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import {
   useToast,
   Box,
@@ -10,47 +10,18 @@ import {
   Text,
   Textarea,
 } from '@chakra-ui/react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 
 import { supabase } from '../../services/supabase';
+import { AppContext } from '../../context/AppContext';
 
 function Question() {
   const [answer, setAnswer] = useState('');
-  const [MBMessages, setMBMessages] = useState([]);
-  const [MBThread, setMBThread] = useState();
+  const { session } = useContext(AppContext);
+
+  const { MBMessages, MBThread, setMBMessages } = useOutletContext();
 
   const toast = useToast();
-  const { slug } = useParams();
-
-  useEffect(() => {
-    async function getMessages(threadId) {
-      const { data, error } = await supabase
-        .from('MBMessage')
-        .select('*')
-        .filter('thread_id', 'eq', threadId);
-
-      return { data, error };
-    }
-
-    async function getThread() {
-      const { data, error } = await supabase
-        .from('MBThread')
-        .select('*')
-        .filter('slug', 'eq', slug);
-
-      return { data, error };
-    }
-
-    getThread()
-      .then(({ data }) => {
-        const thread = data[0];
-
-        setMBThread(thread);
-
-        return getMessages(thread.id);
-      })
-      .then(({ data }) => setMBMessages(data));
-  }, [slug]);
 
   async function onAnswerThread() {
     const { data, error } = await supabase
@@ -78,8 +49,6 @@ function Question() {
       return console.error(error);
     }
 
-    console.log(data);
-
     setMBMessages([...MBMessages, data[0]]);
 
     toast({
@@ -89,6 +58,59 @@ function Question() {
     });
 
     setAnswer('');
+  }
+
+  async function updateMBMessage(mbMessage) {
+    const newAnswer = prompt('Type the new answer', mbMessage.body);
+
+    if (!newAnswer) {
+      return;
+    }
+
+    const { data } = await supabase
+      .from('MBMessage')
+      .upsert({
+        ...mbMessage,
+        body: newAnswer,
+      })
+      .select();
+
+    setMBMessages((prevMBMessages) =>
+      prevMBMessages.map((message) => {
+        if (mbMessage.id === message.id) {
+          return data[0];
+        }
+
+        return message;
+      })
+    );
+  }
+
+  async function deleteMBMessage(id) {
+    const { error, data } = await supabase
+      .from('MBMessage')
+      .delete()
+      .filter('id', 'eq', id)
+      .select();
+
+    if (error || !data.length) {
+      return toast({
+        description: error?.message ?? 'Unable to remove message.',
+        position: 'bottom-right',
+        status: 'error',
+        title: 'Oops... Something went wrong',
+      });
+    }
+
+    setMBMessages((prevMBMessages) =>
+      prevMBMessages.filter((mbMessage) => mbMessage.id !== id)
+    );
+
+    toast({
+      position: 'bottom-right',
+      status: 'success',
+      title: 'Great! Your Answer was deleted.',
+    });
   }
 
   if (!MBThread) {
@@ -107,29 +129,59 @@ function Question() {
         Answers ({MBMessages.length})
       </Heading>
 
-      {MBMessages.map((MBMessage, index) => (
-        <Card mb={4} key={index}>
-          <CardBody>{MBMessage.body}</CardBody>
-        </Card>
-      ))}
+      {MBMessages.map((MBMessage, index) => {
+        const messageCreatedByMe = MBMessage.user_id === session?.user?.id;
 
-      <Box my={10}>
-        <Heading size="md">My Answer...</Heading>
-        <Textarea
-          mt={4}
-          onChange={(event) => setAnswer(event.target.value)}
-          placeholder="How can you help me?"
-          value={answer}
-        />
-        <Button
-          colorScheme="facebook"
-          isDisabled={!answer.trim()}
-          mt={3}
-          onClick={onAnswerThread}
-        >
-          Answer
-        </Button>
-      </Box>
+        return (
+          <Card mb={4} key={index}>
+            <CardBody>
+              <span>{MBMessage.body}</span>
+
+              {messageCreatedByMe && (
+                <Box mt={4}>
+                  <Button
+                    colorScheme="facebook"
+                    size="sm"
+                    onClick={() => updateMBMessage(MBMessage)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    colorScheme="red"
+                    ml={3}
+                    onClick={() => {
+                      deleteMBMessage(MBMessage.id);
+                    }}
+                    size="sm"
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              )}
+            </CardBody>
+          </Card>
+        );
+      })}
+
+      {session && (
+        <Box my={10}>
+          <Heading size="md">My Answer...</Heading>
+          <Textarea
+            mt={4}
+            onChange={(event) => setAnswer(event.target.value)}
+            placeholder="How can you help me?"
+            value={answer}
+          />
+          <Button
+            colorScheme="facebook"
+            isDisabled={!answer.trim()}
+            mt={3}
+            onClick={onAnswerThread}
+          >
+            Answer
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

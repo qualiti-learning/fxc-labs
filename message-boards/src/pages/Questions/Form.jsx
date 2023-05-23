@@ -7,8 +7,8 @@ import {
   Button,
   useToast,
 } from '@chakra-ui/react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 
 import { supabase } from '../../services/supabase';
 import { slugify } from '../../utils';
@@ -16,7 +16,10 @@ import { slugify } from '../../utils';
 // eslint-disable-next-line no-undef
 const NODE_ENV = process.env.NODE_ENV;
 
-function QuestionsCreate() {
+function QuestionForm() {
+  const outletContext = useOutletContext();
+  const { MBThread } = outletContext ?? {};
+
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -24,11 +27,19 @@ function QuestionsCreate() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
 
-  async function createQuestion() {
+  useEffect(() => {
+    if (MBThread) {
+      setTitle(MBThread.title);
+      setBody(MBThread.body);
+    }
+  }, [MBThread]);
+
+  async function saveQuestion() {
     setLoading(true);
 
-    const { error } = await supabase.from('MBThread').insert({
+    const { error } = await supabase.from('MBThread').upsert({
       body,
+      id: MBThread?.id,
       slug: slugify(title),
       title,
     });
@@ -57,7 +68,7 @@ function QuestionsCreate() {
       description: 'You will be redirected to Questions Page',
       position: 'bottom-right',
       status: 'success',
-      title: 'Great! Your Thread was created.',
+      title: `Great! Your Thread was ${MBThread?.id ? 'updated' : 'created'}.`,
     });
 
     navigate('/questions');
@@ -67,16 +78,24 @@ function QuestionsCreate() {
 
   return (
     <>
-      <Heading mb={10}>New Question...</Heading>
+      <Heading mb={10}>{MBThread?.id ? 'Update' : 'New'} Question...</Heading>
 
       <FormControl>
         <FormLabel>Title</FormLabel>
-        <Input onChange={(event) => setTitle(event.target.value)} type="text" />
+        <Input
+          onChange={(event) => setTitle(event.target.value)}
+          type="text"
+          value={title}
+        />
       </FormControl>
 
       <FormControl my={4}>
         <FormLabel>Body</FormLabel>
-        <Textarea onChange={(event) => setBody(event.target.value)} rows={10} />
+        <Textarea
+          onChange={(event) => setBody(event.target.value)}
+          rows={10}
+          value={body}
+        />
       </FormControl>
 
       <Button onClick={() => navigate('/questions')}>Cancel</Button>
@@ -86,7 +105,7 @@ function QuestionsCreate() {
         isDisabled={!isFormValid}
         loadingText="Saving..."
         isLoading={loading}
-        onClick={createQuestion}
+        onClick={saveQuestion}
         variant="solid"
         colorScheme="messenger"
       >
@@ -96,4 +115,4 @@ function QuestionsCreate() {
   );
 }
 
-export default QuestionsCreate;
+export default QuestionForm;

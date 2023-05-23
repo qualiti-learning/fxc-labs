@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 
 import Questions from './pages/Questions';
-import QuestionsCreate from './pages/Questions/Create';
+import QuestionForm from './pages/Questions/Form';
 import Question from './pages/Questions/Question';
+import QuestionOutlet from './pages/Questions/QuestionOutlet';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 
@@ -15,8 +16,11 @@ function MessageBoardRouter() {
 
           <Route path="questions" element={<Outlet />}>
             <Route element={<Questions />} index />
-            <Route path="create" element={<QuestionsCreate />} />
-            <Route path=":slug" element={<Question />} />
+            <Route path="create" element={<QuestionForm />} />
+            <Route path=":slug" element={<QuestionOutlet />}>
+              <Route index element={<Question />} />
+              <Route path="update" element={<QuestionForm />} />
+            </Route>
           </Route>
         </Route>
       </Routes>
