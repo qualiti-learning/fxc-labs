@@ -14,10 +14,11 @@ import { Link } from 'react-router-dom';
 
 import { AppContext } from '../../context/AppContext';
 import useThreads from '../../hooks/useThreads';
+import Loading from '../../components/Loading';
 
 export default function QuestionsList() {
   const { session } = useContext(AppContext);
-  const { loading, questions, deleteThread } = useThreads();
+  const { error, loading, questions, deleteThread } = useThreads();
 
   return (
     <Card flex={true}>
@@ -31,8 +32,10 @@ export default function QuestionsList() {
         <Heading size="md">Questions</Heading>
       </CardHeader>
 
+      {error && <Heading>{error?.message}</Heading>}
+
       {loading ? (
-        <p>Loading...</p>
+        <Loading mb={5} />
       ) : (
         <CardBody>
           <Stack divider={<StackDivider />} spacing="4">

@@ -1,31 +1,31 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useToast } from '@chakra-ui/react';
+import useSWR from 'swr';
 
 import { supabase } from '../services/supabase';
 
 // eslint-disable-next-line no-undef
 const NODE_ENV = process.env.NODE_ENV;
 
+async function getThreads() {
+  const { data, error } = await supabase.from('MBThread').select('*');
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  return data;
+}
+
 const useThreads = () => {
   const toast = useToast();
-  const [loading, setLoading] = useState(true);
-  const [questions, setQuestions] = useState([]);
 
-  useEffect(() => {
-    async function getThreads() {
-      const { data, error } = await supabase.from('MBThread').select('*');
-
-      return {
-        data,
-        error,
-      };
-    }
-
-    getThreads()
-      .then((response) => setQuestions(response.data))
-      .catch((error) => console.error(error))
-      .finally(() => setLoading(false));
-  }, []);
+  const {
+    data: questions = [],
+    error,
+    isLoading,
+    mutate,
+  } = useSWR('/MBThreads', getThreads);
 
   const deleteThread = useCallback(
     async (id) => {
@@ -58,16 +58,19 @@ const useThreads = () => {
       });
 
       if (data.length) {
-        setQuestions((prevQuestions) =>
-          prevQuestions.filter((question) => question.id !== id)
+        mutate(
+          (prevQuestions) =>
+            prevQuestions.filter((question) => question.id !== id),
+          { revalidate: false }
         );
       }
     },
-    [toast]
+    [toast, mutate]
   );
 
   return {
-    loading,
+    error,
+    loading: isLoading,
     questions,
     deleteThread,
   };

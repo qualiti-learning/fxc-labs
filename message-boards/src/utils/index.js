@@ -3,3 +3,11 @@ export function slugify(text = '') {
 
   return _text.replaceAll(' ', '-');
 }
+
+export function waitTimeout(time) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}

@@ -1,6 +1,7 @@
 import { Outlet, useParams } from 'react-router-dom';
+
 import { useThread } from '../../hooks/useThread';
-import { Box, Spinner } from '@chakra-ui/react';
+import Loading from '../../components/Loading';
 
 const QuestionOutlet = () => {
   const { slug } = useParams();
@@ -8,11 +9,7 @@ const QuestionOutlet = () => {
   const [MBThread, setMBThread] = useThread(slug);
 
   if (!MBThread) {
-    return (
-      <Box display="flex" justifyContent="center">
-        <Spinner size="xl" />
-      </Box>
-    );
+    return <Loading />;
   }
 
   return (

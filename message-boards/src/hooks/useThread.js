@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+
 import { supabase } from '../services/supabase';
 
+async function getThread({ slug }) {
+  const { data, error } = await supabase
+    .from('MBThread')
+    .select('*')
+    .filter('slug', 'eq', slug);
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  return data[0];
+}
+
 export const useThread = (slug) => {
-  const [mbThread, setMBThread] = useState(null);
+  const { data: mbThread, mutate } = useSWR(
+    {
+      key: '/thread',
+      slug,
+    },
+    getThread
+  );
 
-  useEffect(() => {
-    async function getThread() {
-      const { data, error } = await supabase
-        .from('MBThread')
-        .select('*')
-        .filter('slug', 'eq', slug);
-
-      return { data, error };
-    }
-
-    getThread().then(({ data }) => setMBThread(data[0]));
-  }, [slug]);
-
-  return [mbThread, setMBThread];
+  return [mbThread, mutate];
 };

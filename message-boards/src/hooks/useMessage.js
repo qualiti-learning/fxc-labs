@@ -1,24 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../services/supabase';
+import { useCallback } from 'react';
 import { useToast } from '@chakra-ui/react';
+import useSWR from 'swr';
+
+import { supabase } from '../services/supabase';
+
+async function getMessages({ threadId }) {
+  const { data, error } = await supabase
+    .from('MBMessage')
+    .select('*')
+    .filter('thread_id', 'eq', threadId);
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  return data;
+}
 
 export const useMessages = (threadId) => {
-  const [MBMessages, setMBMessages] = useState([]);
   const toast = useToast();
 
-  useEffect(() => {
-    async function getMessages(threadId) {
-      const { data, error } = await supabase
-        .from('MBMessage')
-        .select('*')
-        .filter('thread_id', 'eq', threadId);
-      return { data, error };
-    }
-
-    if (threadId) {
-      getMessages(threadId).then(({ data }) => setMBMessages(data));
-    }
-  }, [threadId]);
+  const { data: MBMessages = [], mutate } = useSWR(
+    {
+      key: '/messages',
+      threadId,
+    },
+    getMessages
+  );
 
   const deleteMBMessage = useCallback(
     async (id) => {
@@ -37,8 +45,10 @@ export const useMessages = (threadId) => {
         });
       }
 
-      setMBMessages((prevMBMessages) =>
-        prevMBMessages.filter((mbMessage) => mbMessage.id !== id)
+      mutate(
+        (prevMBMessages) =>
+          prevMBMessages.filter((mbMessage) => mbMessage.id !== id),
+        { revalidate: false }
       );
 
       toast({
@@ -47,34 +57,39 @@ export const useMessages = (threadId) => {
         title: 'Great! Your Answer was deleted.',
       });
     },
-    [toast]
+    [toast, mutate]
   );
 
-  const updateMBMessage = useCallback(async (mbMessage) => {
-    const newAnswer = prompt('Type the new answer', mbMessage.body);
+  const updateMBMessage = useCallback(
+    async (mbMessage) => {
+      const newAnswer = prompt('Type the new answer', mbMessage.body);
 
-    if (!newAnswer) {
-      return;
-    }
+      if (!newAnswer) {
+        return;
+      }
 
-    const { data } = await supabase
-      .from('MBMessage')
-      .upsert({
-        ...mbMessage,
-        body: newAnswer,
-      })
-      .select();
+      const { data } = await supabase
+        .from('MBMessage')
+        .upsert({
+          ...mbMessage,
+          body: newAnswer,
+        })
+        .select();
 
-    setMBMessages((prevMBMessages) =>
-      prevMBMessages.map((message) => {
-        if (mbMessage.id === message.id) {
-          return data[0];
-        }
+      mutate(
+        (prevMBMessages) =>
+          prevMBMessages.map((message) => {
+            if (mbMessage.id === message.id) {
+              return data[0];
+            }
 
-        return message;
-      })
-    );
-  }, []);
+            return message;
+          }),
+        { revalidate: false }
+      );
+    },
+    [mutate]
+  );
 
   const addMBMessage = useCallback(
     async (answer) => {
@@ -103,7 +118,7 @@ export const useMessages = (threadId) => {
         return console.error(error);
       }
 
-      setMBMessages([...MBMessages, data[0]]);
+      mutate([...MBMessages, data[0]], { revalidate: false });
 
       toast({
         position: 'bottom-right',
@@ -111,7 +126,7 @@ export const useMessages = (threadId) => {
         title: 'Great! Your Answer was created.',
       });
     },
-    [MBMessages, threadId, toast]
+    [MBMessages, mutate, threadId, toast]
   );
 
   return {
